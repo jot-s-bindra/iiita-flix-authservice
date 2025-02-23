@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -9,11 +10,26 @@ const PORT = process.env.PORT || 4000;
 app.use(express.json());
 app.use(cookieParser());
 
+// ✅ CORS Configuration (Important: credentials: true)
+app.use(cors({
+    origin: 'http://localhost:5173', // ✅ React Client
+    credentials: true, // ✅ Allow cookies to be sent
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ✅ Handle CORS Preflight
+app.options('*', (req, res) => {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.status(204).end();
+});
+
 app.post('/api/auth/token', (req, res) => {
     const { uid } = req.body;
-    if (!uid) {
-        return res.status(400).json({ error: "User ID is required" });
-    }
+    if (!uid) return res.status(400).json({ error: "User ID is required" });
 
     try {
         const token = jwt.sign({ uid }, process.env.JWT_SECRET, {
@@ -21,9 +37,9 @@ app.post('/api/auth/token', (req, res) => {
         });
 
         res.cookie(process.env.COOKIE_NAME, token, {
-            httpOnly: true,   // Important: Prevents client-side access
-            secure: false,    // Set to true in production (with HTTPS)
-            sameSite: 'Strict'
+            httpOnly: true,
+            secure: false, // Change to true for HTTPS
+            sameSite: 'Lax'
         });
 
         res.status(200).json({ message: "JWT token issued successfully" });
@@ -34,9 +50,7 @@ app.post('/api/auth/token', (req, res) => {
 
 app.get('/api/auth/verify', (req, res) => {
     const token = req.cookies[process.env.COOKIE_NAME];
-    if (!token) {
-        return res.status(401).json({ error: "Token not found" });
-    }
+    if (!token) return res.status(401).json({ error: "Token not found" });
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
