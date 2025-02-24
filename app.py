@@ -55,4 +55,4 @@ def get_student_details():
         return jsonify({"error": "Server error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5112)
+    app.run(debug=True, host='0.0.0.0', port=5112)  
